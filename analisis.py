@@ -1,10 +1,14 @@
 # here I'll explore the dataset 
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
+from scipy import stats
+from scipy.stats import chi2_contingency
 #lets take a deep look into train data
 
 train_set = pd.read_csv('train.csv')
 test_set = pd.read_csv('test.csv')
+submission = pd.read_csv('sample_submission.csv')
+target = 'loan_status'
 '''
 print(train_set.head())
 print(train_set.describe())
@@ -95,9 +99,9 @@ label_encoder = LabelEncoder()
 train_set['person_home_ownership'] = label_encoder.fit_transform(train_set['person_home_ownership'])
 test_set['person_home_ownership'] =  label_encoder.fit_transform(test_set['person_home_ownership'])
 # assign a numerical value for loan_intent
-# Assuming there is a logical order in the 'loan_grade' 
-train_set['loan_grade'] = train_set['loan_grade'].map({'A': 0, 'B': 1, 'C': 2, 'D': 3})
-test_set['loan_grade'] = test_set['loan_grade'].map({'A': 0, 'B': 1, 'C': 2, 'D': 3})
+# Assuming there is a logical order in the 'loan_grade', The data was exp[lored in pwer Bi and we find 7 diferentes loan_grades that caused missing values 
+train_set['loan_grade'] = train_set['loan_grade'].map({'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E' : 4, 'F' : 5, 'G': 6})
+test_set['loan_grade'] = test_set['loan_grade'].map({'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E' : 4, 'F' : 5, 'G': 6})
 # one hot encoding for loan_intent
 train_set = pd.get_dummies(train_set, columns=['loan_intent'])
 test_set = pd.get_dummies(test_set, columns=['loan_intent'])
@@ -149,11 +153,82 @@ print("\nMissing values in test set:")
 print(missing_test[missing_test > 0])  # Print only columns with missing values
 
 '''
+[39098 rows x 17 columns]
 Missing values in training set:
-loan_grade    1191
-dtype: int64
+Series([], dtype: int64)
 
 Missing values in test set:
-loan_grade    760
-dtype: int64
+Series([], dtype: int64)
 '''
+
+# t-students proof 
+
+group1 = train_set[train_set['loan_status'] == 1]['person_income']  # Ingresos de aprobados
+group2 = train_set[train_set['loan_status'] == 0]['person_income']  # Ingresos de no aprobados
+
+# Realizar la prueba t
+t_stat, p_value = stats.ttest_ind(group1, group2)
+
+print(f'T-statistic: {t_stat}, P-value: {p_value}')
+
+
+'''
+loan_status      0     1
+loan_grade              
+0            19952  1032
+1            18313  2087
+2             9542  1494
+3             2046  2988
+4              378   631
+5               58    91
+6                6    27
+T-statistic: -41.76473773511475, P-value: 0.0
+T-statistic:
+
+The T-statistic of -41.76 indicates a very strong difference between the two groups.
+ A negative value suggests that the average income in the group with loan status 0 (not approved)
+ is significantly higher than in the group with loan status 1 (approved).
+
+
+P-value:
+
+The P-value of 0.0 indicates that the result is highly statistically significant. 
+Since the P-value is much less than the typical significance level of 0.05, you can reject the null hypothesis.
+This means there is strong evidence to conclude that there is a 
+significant difference in person_income between those whose loans were approved and those whose loans were not approved.
+'''
+
+
+# Create a sample dataset
+data = {
+    'loan_grade': ['0', '0', '1', '1', '2', '2', '3', '3', '4', '4', '5', '5', '6', '6'],
+    'loan_status': ['Approved', 'Not Approved', 'Approved', 'Not Approved',
+                   'Approved', 'Not Approved', 'Approved', 'Not Approved',
+                   'Approved', 'Not Approved', 'Approved', 'Not Approved',
+                   'Approved', 'Not Approved'],
+    'count': [19952, 1032, 18313, 2087, 9542, 1494, 2046, 2988, 378, 631, 58, 91, 6, 27]
+}
+
+
+
+
+
+'''
+chi cuadrado confirma matriz de correlacion 
+Chi-Squared Statistic: 12476.25
+
+This is a large value, indicating a significant difference between the observed and expected frequencies in your contingency table. A higher Chi-Squared statistic generally suggests that the two categorical variables are associated.
+P-Value: 0.0
+
+The P-value being 0.0 (often represented as less than 0.0001) indicates that the probability of observing such a difference (or a more extreme difference) between the observed and expected frequencies by chance is virtually zero. This strongly suggests that there is a significant association between the variables you're testing (in this case, loan_grade and loan_status).
+Degrees of Freedom: 6
+
+Degrees of freedom for the test are calculated as 
+(number of rows−1)×(number of columns−1). In your case, it indicates that you have a well-defined contingency table structure.
+Expected Frequencies:
+
+These values represent the counts you would expect in each cell of your contingency table if there were no association between the loan_grade and loan_status. For instance, if the observed count in loan_grade 0 and loan_status Approved is significantly higher than the expected frequency, it indicates a stronger association in that category.
+Conclusion
+Given the Chi-Squared statistic and P-value, you can conclude that there is a significant relationship between loan_grade and loan_status. This suggests that the grade of a loan is likely influencing whether it gets approved or not.
+'''
+
