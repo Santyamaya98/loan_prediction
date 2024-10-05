@@ -1,5 +1,14 @@
-# Ignorar el directorio __pycache__
+# Ignorar archivos de cache de Python
 __pycache__/
+*.py[cod]
 
-# Ignorar el entorno virtual
+# Ignorar entornos virtuales
 env/
+venv/
+*.env
+
+# Ignorar modelos de machine learning
+*.pkl
+
+# Ignorar archivos de salida de predicciones
+*.csv
