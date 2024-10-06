@@ -7,8 +7,4 @@ env/
 venv/
 *.env
 
-# Ignorar modelos de machine learning
-*.pkl
 
-# Ignorar archivos de salida de predicciones
-*.csv
