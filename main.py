@@ -15,6 +15,7 @@ def load_models():
     with open('rf_model.pkl', 'rb') as f:
         rf_model = pickle.load(f)
 
+
     return logistic_model, rf_model
 
 def make_predictions(logistic_model, rf_model, scaler, test):
