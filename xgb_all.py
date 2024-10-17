@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, GridSearchCV
 from imblearn.over_sampling import SMOTE  # To handle class imbalance
 from sklearn.model_selection import cross_val_score
-from analisis import train_set, test_set, submission  # Asegúrate de importar las variables necesarias
+from analisis import train_set, test_set # Asegúrate de importar las variables necesarias
 
 def train_and_predict(train_data, test_data, target_column='loan_status', submission_file='submission.csv'):
     # Prepare the entire training set (using all columns except the target variable)
