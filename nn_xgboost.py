@@ -4,15 +4,14 @@ import pickle
 import pandas as pd
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE  # Para manejar el desbalance de clases
-from analisis import train_set, test_set# Asegúrate de importar las variables necesarias
-
+from analisis import train_set, test_set  # Asegúrate de importar las variables necesarias
 
 def train_and_predict(train_data, test_data, target_column='loan_status', submission_file='submission.csv'):
     # Preparar el set de entrenamiento completo
     X = train_data.drop(columns=[target_column])
-    y = train_data[target_column] 
+    y = train_data[target_column]
 
     # Dividir el conjunto de entrenamiento en entrenamiento y validación
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -30,6 +29,10 @@ def train_and_predict(train_data, test_data, target_column='loan_status', submis
     # Crear y entrenar el modelo XGBoost
     xgb_model = xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss')
     xgb_model.fit(X_train_resampled, y_train_resampled)
+
+    # Guardar el modelo XGBoost entrenado usando pickle
+    with open('xgb_model.pkl', 'wb') as file:
+        pickle.dump(xgb_model, file)
 
     # Hacer predicciones con el conjunto de validación
     y_pred_xgb = xgb_model.predict(X_val_scaled)
@@ -57,7 +60,10 @@ def train_and_predict(train_data, test_data, target_column='loan_status', submis
                      metrics=['accuracy'])
 
     # Entrenar el modelo
-    model_nn.fit(X_train_resampled, y_train_resampled, epochs=10, validation_data=(X_val_scaled, y_val))
+    model_nn.fit(X_train_resampled, y_train_resampled, epochs=50, validation_data=(X_val_scaled, y_val))
+
+    # Guardar el modelo de Red Neuronal usando pickle
+    model_nn.save('nn_model.h5')
 
     # Evaluar el modelo de Red Neuronal
     print("Red Neuronal Evaluation")
@@ -95,8 +101,46 @@ def train_and_predict(train_data, test_data, target_column='loan_status', submis
     submission_nn.to_csv(submission_file.replace('.csv', '_nn.csv'), index=False)
     print(f"Archivos de predicción creados: {submission_file.replace('.csv', '_xgb.csv')} y {submission_file.replace('.csv', '_nn.csv')}")
 
+def ensemble_average(X_test_scaled, xgb_model, nn_model):
+    # Predicciones del modelo XGBoost
+    y_pred_xgb_proba = xgb_model.predict_proba(X_test_scaled)[:, 1]  # Probabilidades de la clase positiva
+
+    # Predicciones del modelo de Red Neuronal
+    y_pred_nn_proba = nn_model.predict(X_test_scaled).flatten()  # Probabilidades de la clase positiva
+
+    # Promedio de las probabilidades
+    y_pred_avg_proba = (y_pred_xgb_proba + y_pred_nn_proba) / 2
+
+    # Convertir las probabilidades promedio en clases finales (umbral 0.5)
+    y_pred_avg = (y_pred_avg_proba > 0.5).astype(int)
+
+    return y_pred_avg
+
 # Llamar a la función con el conjunto de entrenamiento y prueba
 train_and_predict(train_set, test_set)
+
+# Cargar los modelos guardados para hacer predicciones o ensamble
+with open('xgb_model.pkl', 'rb') as file:
+    xgb_model = pickle.load(file)
+
+model_nn = tf.keras.models.load_model('nn_model.h5')
+
+# Uso del ensamble por promediado
+X_test_scaled = StandardScaler().fit_transform(test_set)  # Asegurarse de que las características del test estén escaladas
+y_pred_ensemble = ensemble_average(X_test_scaled, xgb_model, model_nn)
+
+# Crear un DataFrame para la predicción del ensamble
+submission_ensemble = pd.DataFrame({
+    'id': test_set['id'],
+    'loan_status': y_pred_ensemble
+})
+
+# Guardar la predicción del ensamble como un archivo CSV
+submission_file_ensemble = 'submission_ensemble.csv'
+submission_ensemble.to_csv(submission_file_ensemble, index=False)
+print(f"Archivo de predicción de ensamble creado: {submission_file_ensemble}")
+
+
 
 '''(env) usuario@usuario-System-Product-Name:~/hoja_vida/kaggle_projects/loan_prediction$ python3 nn_xgboost.py
 2024-10-17 17:23:19.268873: I external/local_xla/xla/tsl/cuda/cudart_stub.cc:32] Could not find cuda drivers on your machine, GPU will not be used.
