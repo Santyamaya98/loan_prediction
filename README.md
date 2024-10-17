@@ -16,8 +16,8 @@ Este proyecto se centra en la predicción de la aprobación de préstamos utiliz
 
 1. Clona este repositorio:
    ```bash
-   git clone <URL_DEL_REPOSITORIO>
-   cd <NOMBRE_DEL_REPOSITORIO>
+   git clone https://github.com/Santyamaya98/loan_prediction.git
+   cd loan_prediction
 python -m venv env
 source env/bin/activate  # En Windows usa `env\Scripts\activate`
 pip install -r requirements.txt
